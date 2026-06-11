@@ -154,9 +154,20 @@
       : "-";
   }
 
-  function getVariantLabel(variant, index) {
+  function summarizeVariantHint(variant) {
+    return [
+      cleanCell(variant.relicSets?.[0]),
+      cleanCell(variant.ornamentSets?.[0]),
+      cleanCell(variant.lightCones?.[0]),
+    ].filter(Boolean)[0] || "";
+  }
+
+  function getVariantLabel(variant, index, duplicateRole = false) {
     const label = cleanCell(variant.role);
-    return label ? `${index + 1}. ${label.replace(/\n+/g, " / ")}` : "";
+    if (!label) return "";
+    const role = label.replace(/\n+/g, " / ");
+    const hint = duplicateRole ? summarizeVariantHint(variant).replace(/\n+/g, " / ") : "";
+    return `${index + 1}. ${role}${hint ? ` - ${hint}` : ""}`;
   }
 
   function renderUnmappedSets(sets) {
@@ -171,29 +182,35 @@
     `;
   }
 
-  function renderVariantList(row, selectedVariant) {
+  function renderVariantList(row, selectedVariant, renderedRowIndex) {
     if (!row.variants.length) return "";
+    const roleCounts = row.variants.reduce((counts, variant) => {
+      const role = cleanCell(variant.role);
+      if (role) counts.set(role, (counts.get(role) || 0) + 1);
+      return counts;
+    }, new Map());
+
     return `
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:#aab4c3;font-size:11px;">
-        <strong style="color:#d7dee8;">기준 세팅</strong>
+        <strong style="color:#d7dee8;">기준 역할</strong>
         ${row.variants.map((variant, index) => {
           if (!cleanCell(variant.role)) return "";
           const selected = variant === selectedVariant;
-          const label = getVariantLabel(variant, index);
-          return `<button type="button" data-jalkiwotda-row-index="${escapeHtml(row.rowIndex)}" data-jalkiwotda-variant-index="${escapeHtml(index)}" style="display:inline-block;padding:2px 5px;border:1px solid ${selected ? "#8ab4ff" : "#5f6b7a"};border-radius:4px;color:${selected ? "#fff" : "#aab4c3"};background:${selected ? "#25324a" : "transparent"};white-space:nowrap;font:inherit;cursor:pointer;">${escapeHtml(label)}</button>`;
+          const label = getVariantLabel(variant, index, roleCounts.get(cleanCell(variant.role)) > 1);
+          return `<button type="button" data-jalkiwotda-row-index="${escapeHtml(renderedRowIndex)}" data-jalkiwotda-variant-index="${escapeHtml(index)}" style="display:inline-block;padding:2px 5px;border:1px solid ${selected ? "#8ab4ff" : "#5f6b7a"};border-radius:4px;color:${selected ? "#fff" : "#aab4c3"};background:${selected ? "#25324a" : "transparent"};white-space:nowrap;font:inherit;cursor:pointer;">${escapeHtml(label)}</button>`;
         }).join("")}
       </div>
     `;
   }
 
-  function renderReportRow(row) {
+  function renderReportRow(row, renderedRowIndex) {
     const selectedComparison = row.comparison || {};
     const variant = selectedComparison.variant || row.variants[0] || {};
     const checks = selectedComparison.checks || {};
     const columnCount = 8;
 
     return `
-      ${row.variants.length ? `<tr data-jalkiwotda-settings-row><td colspan="${columnCount}">${renderVariantList(row, variant)}</td></tr>` : ""}
+      ${row.variants.length ? `<tr data-jalkiwotda-settings-row><td colspan="${columnCount}">${renderVariantList(row, variant, renderedRowIndex)}</td></tr>` : ""}
       <tr>
         <td>${renderInlineIcon(row.iconUrl, app.styles.characterIcon)}${escapeHtml(row.name)}</td>
         <td>Lv.${escapeHtml(row.level)}<br>${escapeHtml(formatEidolon(row.rank))}</td>
