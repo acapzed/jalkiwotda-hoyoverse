@@ -9,10 +9,16 @@
     parseNumber,
   } = app.utils;
 
+  function getSheetCharacterByName(sheetByNormalizedName, name) {
+    if (!name) return null;
+    return sheetByNormalizedName.get(normalizeName(name)) || null;
+  }
+
   function resolveSheetName(character, sheetByNormalizedName) {
     const normalized = normalizeName(getCharacterName(character));
     const alias = app.constants.aliases.get(normalized);
-    if (alias) return alias;
+    const aliasCharacter = getSheetCharacterByName(sheetByNormalizedName, alias);
+    if (aliasCharacter) return aliasCharacter.name;
     return sheetByNormalizedName.get(normalized)?.name || null;
   }
 

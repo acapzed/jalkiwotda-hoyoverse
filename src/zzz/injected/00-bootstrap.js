@@ -46,7 +46,9 @@
         sphere: 1,
         rope: 0,
       },
-      aliases: new Map(),
+      aliases: new Map([
+        ["오피도깨비불", "오피"],
+      ]),
       pathSuffixByBaseType: new Map(),
       equipmentSetByItemKey: new Map(),
     },

@@ -359,4 +359,7 @@
     installFetchHook,
     installXhrHook,
   });
+
+  installFetchHook();
+  installXhrHook();
 })();

@@ -24,16 +24,18 @@
   }
 
   helpers.installGameContent({
+    installFlag: "__JALKIWOTDA_ZZZ_CONTENT_INSTALLED__",
     shouldInstall: () => window.location.pathname === "/app/zzz-game-record/index.html" && window.location.hash.startsWith("#/zzz"),
+    waitForInstall: true,
     injectedFiles: [
       "src/zzz/injected/00-bootstrap.js",
       "src/zzz/injected/01-utils.js",
+      "src/common/injected/response-capture.js",
+      "src/zzz/injected/06-network.js",
       "src/zzz/injected/02-sheet.js",
       "src/zzz/injected/03-wiki.js",
       "src/zzz/injected/04-compare.js",
       "src/zzz/injected/05-render.js",
-      "src/common/injected/response-capture.js",
-      "src/zzz/injected/06-network.js",
       "src/zzz/injected/07-panel.js",
       "src/zzz/injected/08-main.js",
     ],

@@ -10,19 +10,38 @@
     parseNumber,
   } = app.utils;
 
+  function getCharacterName(character) {
+    return cleanCell(
+      character.name ||
+      character.name_mi18n ||
+      character.full_name ||
+      character.full_name_mi18n ||
+      character.avatar_name ||
+      "",
+    );
+  }
+
+  function getSheetCharacterByName(sheetByNormalizedName, name) {
+    if (!name) return null;
+    return sheetByNormalizedName.get(normalizeName(name)) || null;
+  }
+
   function resolveSheetName(character, sheetByNormalizedName) {
-    const normalized = normalizeName(character.name);
+    const normalized = normalizeName(getCharacterName(character));
     const alias = app.constants.aliases.get(normalized);
-    if (alias) return alias;
+    const aliasCharacter = getSheetCharacterByName(sheetByNormalizedName, alias);
+    if (aliasCharacter) return aliasCharacter.name;
 
     if (normalized === "개척자") {
       const suffix = app.constants.pathSuffixByBaseType.get(character.base_type);
-      return suffix ? `개척자•${suffix}` : null;
+      const sheetCharacter = getSheetCharacterByName(sheetByNormalizedName, suffix ? `개척자•${suffix}` : "");
+      return sheetCharacter?.name || null;
     }
 
     if (normalized === "Mar7th") {
       const suffix = app.constants.pathSuffixByBaseType.get(character.base_type);
-      return suffix ? `Mar.7•${suffix}` : null;
+      const sheetCharacter = getSheetCharacterByName(sheetByNormalizedName, suffix ? `Mar.7•${suffix}` : "");
+      return sheetCharacter?.name || null;
     }
 
     return sheetByNormalizedName.get(normalized)?.name || null;

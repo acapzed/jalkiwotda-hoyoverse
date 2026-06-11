@@ -302,4 +302,7 @@
     installFetchHook,
     installXhrHook,
   });
+
+  installFetchHook();
+  installXhrHook();
 })();

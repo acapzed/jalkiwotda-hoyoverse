@@ -46,10 +46,24 @@
     let detailData = app.network.getLatestDetailData();
     const reportButton = document.querySelector('[data-jalkiwotda-genshin-action="report"]');
     const previousButtonText = reportButton?.textContent || "";
+    const getCharacterCount = (data) =>
+      (data?.jalkiwotda_ordered_characters ||
+        data?.avatar_list ||
+        data?.avatars ||
+        data?.list ||
+        data?.characters ||
+        data?.character_list ||
+        []).length;
 
     function setReportState(message) {
       if (reportButton) reportButton.textContent = message;
     }
+
+    console.debug("[jalkiwotda-genshin] report requested", {
+      captured: app.state.responses.length,
+      characterCount: getCharacterCount(detailData),
+      urls: app.state.responses.slice(-8).map((response) => response.url),
+    });
 
     if (!detailData) {
       alert("아직 캐릭터 정보를 가져오지 못했습니다. HoYoLAB 페이지를 새로고침한 뒤 다시 시도하세요.");
@@ -62,6 +76,10 @@
         detailData = await app.network.loadAllCharacterDetails(detailData, (done, total) => {
           setReportState(`캐릭터 상세 로딩 중... ${done}/${total}`);
         });
+        console.debug("[jalkiwotda-genshin] detail data ready", {
+          captured: app.state.responses.length,
+          characterCount: getCharacterCount(detailData),
+        });
       } catch (error) {
         console.warn("[jalkiwotda-genshin] character detail load failed", error);
       }
@@ -73,6 +91,11 @@
 
       setReportState("기준표 로딩 중...");
       const sheetCharacters = await app.sheet.loadSheetCharacters();
+      console.debug("[jalkiwotda-genshin] sheet data ready", {
+        sheetCharacters: sheetCharacters.length,
+        sheetTitle: app.state.sheetMetadataCache?.title || "",
+        sheetVersion: app.state.sheetMetadataCache?.version || app.state.sheetVersion,
+      });
       let wikiSetNames = new Map();
 
       try {
@@ -84,6 +107,10 @@
 
       setReportState("리포트 생성 중...");
       const rows = app.compare.buildReportRows(detailData, sheetCharacters, wikiSetNames);
+      console.debug("[jalkiwotda-genshin] report rows built", {
+        rows: rows.length,
+        matched: rows.filter((row) => row.matched).length,
+      });
       const modal = app.render.getOrCreateReportModal();
       app.render.renderReportModal(modal, rows);
     } catch (error) {
