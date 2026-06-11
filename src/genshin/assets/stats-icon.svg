@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Stat match icon">
+  <rect width="128" height="128" rx="26" fill="#121722"/>
+  <rect x="26" y="72" width="13" height="24" rx="4" fill="#94a3b8"/>
+  <rect x="47" y="54" width="13" height="42" rx="4" fill="#cbd5e1"/>
+  <rect x="68" y="34" width="13" height="62" rx="4" fill="#f8fafc"/>
+  <path d="M25 98h58" fill="none" stroke="#e5e7eb" stroke-width="7" stroke-linecap="round"/>
+  <path d="M29 50 47 39l18 8 23-23" fill="none" stroke="#7dd3fc" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="91" cy="83" r="25" fill="#16a34a"/>
+  <path d="m78 82 9 9 18-20" fill="none" stroke="#f8fafc" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
