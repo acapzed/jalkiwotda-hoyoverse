@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "jalkiwotda-hoyoverse",
-  "version": "1.0.1",
+  "name": "한눈에 이잘키 정오표",
+  "short_name": "이잘키 정오표",
+  "version": "1.0.2",
   "description": "HoYoLAB 원신, 스타레일, 젠존제 캐릭터 정보를 기준표와 비교해 리포트를 만듭니다.",
   "icons": {
     "16": "src/genshin/assets/icon-16.png",
