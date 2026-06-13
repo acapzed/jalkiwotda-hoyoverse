@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="src/genshin/assets/icon-128.png" width="256" alt="아이콘">
+<img src="docs/assets/report-screenshot.png" alt="리포트 스크린샷">
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ilgdadofigikokamdfgamikpdgbhkgeo?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/ilgdadofigikokamdfgamikpdgbhkgeo?utm_source=item-share-cb)
 [![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/ilgdadofigikokamdfgamikpdgbhkgeo)](https://chromewebstore.google.com/detail/ilgdadofigikokamdfgamikpdgbhkgeo?utm_source=item-share-cb)
