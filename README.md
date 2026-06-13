@@ -1,12 +1,20 @@
 # 한눈에 이잘키 정오표 / jalkiwotda-hoyoverse
 
+<div align="center">
+
+<img src="src/genshin/assets/icon-128.png" width="256" alt="아이콘">
+
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ilgdadofigikokamdfgamikpdgbhkgeo?label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/ilgdadofigikokamdfgamikpdgbhkgeo?utm_source=item-share-cb)
+[![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/ilgdadofigikokamdfgamikpdgbhkgeo)](https://chromewebstore.google.com/detail/ilgdadofigikokamdfgamikpdgbhkgeo?utm_source=item-share-cb)
+[![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)](https://developer.chrome.com/docs/extensions/mv3/intro/)
+
+</div>
+
 HoYoLAB 원신, 붕괴: 스타레일, 젠레스 존 제로 전적 페이지에서 캐릭터 정보를 읽어, 커뮤니티 기준표 **"이정도면 잘키웠다"** 와 비교하는 브라우저 확장 프로그램입니다.
 
 > 이 프로젝트는 HoYoverse 공식 프로젝트가 아닌 팬 메이드 도구입니다.
 
 저장소: https://github.com/acapzed/jalkiwotda-hoyoverse
-
-<a href="https://chromewebstore.google.com/detail/ilgdadofigikokamdfgamikpdgbhkgeo?utm_source=item-share-cb"><img alt="Chrome Web Store" src="https://img.shields.io/badge/Chrome%20Web%20Store-설치-4285F4?logo=googlechrome&logoColor=white"></a>
 
 ---
 
