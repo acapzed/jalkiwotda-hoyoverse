@@ -10,18 +10,40 @@
     parseNumber,
   } = app.utils;
 
+  function getUniqueIncludedSheetCharacter(sheetByNormalizedName, normalized) {
+    const candidates = Array.from(sheetByNormalizedName.values())
+      .filter((character) => {
+        const sheetName = normalizeName(character.name);
+        return sheetName.length >= 2 && normalized.includes(sheetName);
+      });
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
   function resolveSheetName(character, sheetByNormalizedName) {
     const normalized = normalizeName(character.base?.name || character.name);
+    const exactCharacter = sheetByNormalizedName.get(normalized);
+    if (exactCharacter) return exactCharacter.name;
+
     const alias = app.constants.aliases.get(normalized);
-    if (alias) return alias;
+    const aliasCharacter = alias ? sheetByNormalizedName.get(normalizeName(alias)) : null;
+    if (aliasCharacter) return aliasCharacter.name;
+
+    const includedCharacter = getUniqueIncludedSheetCharacter(sheetByNormalizedName, normalized);
+    if (includedCharacter) return includedCharacter.name;
 
     if (normalized === "여행자") {
       const element = normalizeName(character.base?.element || character.element || character.base?.element_name || character.element_name);
       const elementName = app.constants.travelerElementNames.get(element);
-      if (elementName) return `${elementName} 원소 여행자`;
+      const candidates = elementName
+        ? [`${elementName} 원소 여행자`, `여행자(${elementName})`, `${elementName}행자`, "여행자"]
+        : ["여행자"];
+      const sheetCharacter = candidates
+        .map((name) => sheetByNormalizedName.get(normalizeName(name)))
+        .find(Boolean);
+      if (sheetCharacter) return sheetCharacter.name;
     }
 
-    return sheetByNormalizedName.get(normalized)?.name || null;
+    return null;
   }
 
   function getReportCharacterId(character, sheetCharacter) {
@@ -82,7 +104,7 @@
   function stripTargetValuePrefix(value) {
     return stripSheetOptionPrefix(value)
       .replace(/(:\s*)\(?[A-Z](?:,[A-Z])*\)?[.)]?\s*/gu, "$1")
-      .replace(/(:\s*)\(?\d+\)?[.)]\s*/gu, "$1")
+      .replace(/(:\s*)\(?\d+\)?[.)](?!\d)\s*/gu, "$1")
       .replace(/(:\s*)[가-힣][.)]\s*/gu, "$1");
   }
 
@@ -134,7 +156,8 @@
     const normalized = normalizeSetCompareText(value);
     const aliases = [normalized];
     const aliasGroups = [
-      ["바람", "청록색그림자"],
+      ["청록", "청록색그림자"],
+      ["바람", "마도", "바람이시작되는날"],
       ["마녀", "불타오르는화염의마녀"],
       ["왕실", "옛왕실의의식"],
       ["악단", "대지를유랑하는악단"],
@@ -150,6 +173,7 @@
       ["공상", "조화로운공상의단편"],
       ["흑요석", "흑요석비전"],
       ["잿더미", "잿더미성용사의두루마리"],
+      ["밤노래", "달을엮는밤노래"],
       ["지난날", "지난날의노래"],
       ["검투사", "검투사의피날레"],
       ["조개", "바다에물든거대조개"],
@@ -180,8 +204,35 @@
     if (/체력|hp/.test(normalized)) {
       ["견고한천암", "감로빛꽃바다"].forEach((alias) => addUnique(aliases, alias));
     }
+    if (/^(?:방|방어|방어력)$/u.test(normalized)) {
+      ["풍요로운꿈의껍데기", "수호자의마음"].forEach((alias) => addUnique(aliases, alias));
+    }
+    if (/방\d*원|원\d*방/.test(normalized)) {
+      ["풍요로운꿈의껍데기", "수호자의마음", "대지를유랑하는악단", "도금된꿈", "잃어버린낙원의꽃", "교관"].forEach((alias) => addUnique(aliases, alias));
+    }
+    if (/원충|에너지회복효율/.test(normalized)) {
+      ["절연의기치", "유배자", "학사", "하늘의은총"].forEach((alias) => addUnique(aliases, alias));
+    }
 
     return aliases.filter(Boolean);
+  }
+
+  function splitSetRequirementParts(entry) {
+    const plusParts = entry.split(/\s*\+\s*/).filter((part) => cleanCell(part));
+    if (plusParts.length !== 1) return plusParts;
+
+    const normalized = normalizeCompareText(plusParts[0]);
+    const matches = Array.from(normalized.matchAll(/(방어력|방어|방|원마|원)([24])(?:셋|세트)?/gu));
+    if (matches.length < 2) return plusParts;
+
+    let cursor = 0;
+    for (const match of matches) {
+      if (match.index !== cursor) return plusParts;
+      cursor += match[0].length;
+    }
+    if (cursor !== normalized.length) return plusParts;
+
+    return matches.map((match) => `${match[1] === "원" ? "원마" : match[1]}${match[2]}`);
   }
 
   function getPropertyName(propertyInfo, property) {
@@ -355,7 +406,7 @@
       })),
     );
     const matched = expected.find((entry) => {
-      const rawParts = entry.split(/\s*\+\s*/).filter((part) => cleanCell(part));
+      const rawParts = splitSetRequirementParts(entry);
       const requiredParts = rawParts
         .map((part) => ({
           aliases: expandSetAliases(part),

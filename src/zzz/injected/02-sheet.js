@@ -150,12 +150,14 @@
   }
 
   function requestSheetFromExtension() {
+    const SHEET_BRIDGE_TIMEOUT_MS = 20_000;
+
     return new Promise((resolve, reject) => {
       const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const timeoutId = window.setTimeout(() => {
         window.removeEventListener("message", handleMessage);
         reject(new Error("Sheet bridge did not respond. Reload the HoYoLAB page after reloading the extension."));
-      }, 7000);
+      }, SHEET_BRIDGE_TIMEOUT_MS);
 
       function handleMessage(event) {
         if (event.source !== window || event.origin !== window.location.origin) return;

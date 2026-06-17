@@ -26,11 +26,26 @@
     return sheetByNormalizedName.get(normalizeName(name)) || null;
   }
 
+  function getUniqueIncludedSheetCharacter(sheetByNormalizedName, normalized) {
+    const candidates = Array.from(sheetByNormalizedName.values())
+      .filter((character) => {
+        const sheetName = normalizeName(character.name);
+        return sheetName.length >= 2 && normalized.includes(sheetName);
+      });
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
   function resolveSheetName(character, sheetByNormalizedName) {
     const normalized = normalizeName(getCharacterName(character));
+    const exactCharacter = sheetByNormalizedName.get(normalized);
+    if (exactCharacter) return exactCharacter.name;
+
     const alias = app.constants.aliases.get(normalized);
     const aliasCharacter = getSheetCharacterByName(sheetByNormalizedName, alias);
     if (aliasCharacter) return aliasCharacter.name;
+
+    const includedCharacter = getUniqueIncludedSheetCharacter(sheetByNormalizedName, normalized);
+    if (includedCharacter) return includedCharacter.name;
 
     if (normalized === "개척자") {
       const suffix = app.constants.pathSuffixByBaseType.get(character.base_type);
@@ -44,7 +59,7 @@
       return sheetCharacter?.name || null;
     }
 
-    return sheetByNormalizedName.get(normalized)?.name || null;
+    return null;
   }
 
   function splitExpectedOptions(values) {

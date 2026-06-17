@@ -196,13 +196,22 @@
     return text.match(/\d[\d,]*(?:\.\d+)?%?/u)?.[0] || "";
   }
 
+  function getCompactPercentNumber(value) {
+    const number = getCompactStatNumber(value);
+    const parsed = Number(number);
+    if (!number.includes("%") && number.includes(".") && Number.isFinite(parsed) && parsed > 0 && parsed <= 5) {
+      return `${Number((parsed * 100).toFixed(1))}%`;
+    }
+    return number;
+  }
+
   function formatCompactStatTarget(row) {
     const attack = cleanCompactGenshinCell(row, 10);
     const energyRecharge = cleanCompactGenshinCell(row, 12);
     const elementalMastery = cleanCompactGenshinCell(row, 14);
     return [
       getCompactStatNumber(attack) ? `공:${getCompactStatNumber(attack)}` : "",
-      getCompactStatNumber(energyRecharge) ? `원충:${getCompactStatNumber(energyRecharge)}` : "",
+      getCompactPercentNumber(energyRecharge) ? `원충:${getCompactPercentNumber(energyRecharge)}` : "",
       getCompactStatNumber(elementalMastery) ? `원마:${getCompactStatNumber(elementalMastery)}` : "",
     ].filter(Boolean).join("\n");
   }
@@ -215,10 +224,10 @@
   }
 
   function parseCompactCritTargets(row) {
-    const withCritWeaponRate = getCompactStatNumber(cleanCompactGenshinCell(row, 15));
-    const withCritWeaponDamage = getCompactStatNumber(cleanCompactGenshinCell(row, 16));
-    const withoutCritWeaponRate = getCompactStatNumber(cleanCompactGenshinCell(row, 17));
-    const withoutCritWeaponDamage = getCompactStatNumber(cleanCompactGenshinCell(row, 18));
+    const withCritWeaponRate = getCompactPercentNumber(cleanCompactGenshinCell(row, 15));
+    const withCritWeaponDamage = getCompactPercentNumber(cleanCompactGenshinCell(row, 16));
+    const withoutCritWeaponRate = getCompactPercentNumber(cleanCompactGenshinCell(row, 17));
+    const withoutCritWeaponDamage = getCompactPercentNumber(cleanCompactGenshinCell(row, 18));
 
     return {
       critDamageWeapon: formatCritPair(withCritWeaponRate, withCritWeaponDamage),
@@ -484,12 +493,21 @@
   }
 
   function requestSheetFromExtension() {
+    const SHEET_BRIDGE_TIMEOUT_MS = 20_000;
+
     return new Promise((resolve, reject) => {
       const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const startedAt = performance.now();
       const timeoutId = window.setTimeout(() => {
         window.removeEventListener("message", handleMessage);
+        console.warn("[jalkiwotda-genshin] sheet bridge timeout", {
+          requestId,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          sheetVersion: app.state.sheetVersion,
+          url: window.location.href,
+        });
         reject(new Error("Sheet bridge did not respond. Reload the HoYoLAB page after reloading the extension."));
-      }, 7000);
+      }, SHEET_BRIDGE_TIMEOUT_MS);
 
       function handleMessage(event) {
         if (event.source !== window || event.origin !== window.location.origin) return;
@@ -498,14 +516,32 @@
         window.clearTimeout(timeoutId);
         window.removeEventListener("message", handleMessage);
 
+        const elapsedMs = Math.round(performance.now() - startedAt);
         if (event.data.ok) {
-          console.info(`[jalkiwotda-genshin] sheet source: ${event.data.source || "unknown"}`);
+          console.info("[jalkiwotda-genshin] sheet bridge response", {
+            requestId,
+            elapsedMs,
+            source: event.data.source || "unknown",
+            rowCount: Array.isArray(event.data.sheet?.rows) ? event.data.sheet.rows.length : null,
+          });
           resolve(event.data.sheet);
         }
-        else reject(new Error(event.data.error || "Sheet request failed"));
+        else {
+          console.warn("[jalkiwotda-genshin] sheet bridge error response", {
+            requestId,
+            elapsedMs,
+            error: event.data.error || "Sheet request failed",
+          });
+          reject(new Error(event.data.error || "Sheet request failed"));
+        }
       }
 
       window.addEventListener("message", handleMessage);
+      console.info("[jalkiwotda-genshin] sheet bridge request", {
+        requestId,
+        sheetVersion: app.state.sheetVersion,
+        url: window.location.href,
+      });
       window.postMessage({
         type: "JALKIWOTDA_GENSHIN_SHEET_REQUEST",
         requestId,

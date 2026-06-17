@@ -47,7 +47,12 @@
         rope: 0,
       },
       aliases: new Map([
-        ["오피도깨비불", "오피"],
+        ["벨리나에어기드", "벨리나"],
+        ["스타라이트빌리", "S. 빌리"],
+        ["루시아엘로웬", "루시아"],
+        ["루시아나드몬테피오", "루시"],
+        ["벤비거", "벤"],
+        ["네코미야마나", "네코마타"],
       ]),
       pathSuffixByBaseType: new Map(),
       equipmentSetByItemKey: new Map(),

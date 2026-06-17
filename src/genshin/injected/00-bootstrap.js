@@ -68,11 +68,7 @@
         { id: "jalkiwotda", label: "이정도면잘키웠다" },
         { id: "all-in-one", label: "올인원 준종결표" },
       ],
-      aliases: new Map([
-        ["Dr레이시오", "레이시오"],
-        ["블랙스완", "블랙스완"],
-        ["완매", "완매"],
-      ]),
+      aliases: new Map([]),
       travelerElementNames: new Map([
         ["Pyro", "불"],
         ["Fire", "불"],

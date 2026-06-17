@@ -24,11 +24,30 @@
       if (event.data?.type !== requestType) return;
 
       const requestId = event.data.requestId;
+      const startedAt = performance.now();
+      const sheetMessage = getSheetMessage(event.data);
+      console.info("[jalkiwotda] sheet bridge request", {
+        requestType,
+        fetchType,
+        requestId,
+        url: window.location.href,
+        payload: sheetMessage,
+      });
 
       try {
         const response = await chrome.runtime.sendMessage({
           type: fetchType,
-          ...getSheetMessage(event.data),
+          ...sheetMessage,
+        });
+        const elapsedMs = Math.round(performance.now() - startedAt);
+        console.info("[jalkiwotda] sheet bridge response", {
+          responseType,
+          requestId,
+          elapsedMs,
+          ok: Boolean(response?.ok),
+          source: response?.source || "",
+          error: response?.error || "",
+          rowCount: Array.isArray(response?.sheet?.rows) ? response.sheet.rows.length : null,
         });
 
         window.postMessage(
@@ -43,6 +62,12 @@
           window.location.origin,
         );
       } catch (error) {
+        console.warn("[jalkiwotda] sheet bridge failed", {
+          responseType,
+          requestId,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          error: error?.message || String(error),
+        });
         window.postMessage(
           {
             type: responseType,

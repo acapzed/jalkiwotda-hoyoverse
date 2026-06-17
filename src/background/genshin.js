@@ -236,6 +236,21 @@ function colorToHex(attrs) {
 }
 
 function parseStyles(xml) {
+  const numberFormats = new Map([
+    [9, "0%"],
+    [10, "0.00%"],
+  ]);
+  const numFmtPattern = /<numFmt\b[^>]*\/?>/g;
+  let numFmtMatch;
+
+  while ((numFmtMatch = numFmtPattern.exec(xml))) {
+    const attrs = getAttributes(numFmtMatch[0]);
+    const id = Number(attrs.numFmtId);
+    if (Number.isFinite(id) && attrs.formatCode) {
+      numberFormats.set(id, attrs.formatCode);
+    }
+  }
+
   const fills = [];
   const fillPattern = /<fill\b[^>]*>([\s\S]*?)<\/fill>/g;
   let fillMatch;
@@ -270,17 +285,28 @@ function parseStyles(xml) {
     const attrs = getAttributes(xfMatch[0]);
     const fill = fills[Number(attrs.fillId || 0)] || {};
     const font = fonts[Number(attrs.fontId || 0)] || {};
+    const numberFormatId = Number(attrs.numFmtId || 0);
     styles.push({
       background: fill.foreground || fill.background || "",
       foreground: font.foreground || "",
       bold: Boolean(font.bold),
+      numberFormat: numberFormats.get(numberFormatId) || "",
     });
   }
 
   return styles;
 }
 
-function getCellText(cellXml, type, sharedStrings) {
+function formatPercentCellValue(value, numberFormat) {
+  if (!String(numberFormat || "").includes("%")) return value;
+
+  const number = Number(value);
+  if (!Number.isFinite(number)) return value;
+
+  return `${Number((number * 100).toFixed(10))}%`;
+}
+
+function getCellText(cellXml, type, sharedStrings, style = {}) {
   if (type === "inlineStr") {
     return Array.from(cellXml.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g))
       .map((match) => decodeXml(match[1]))
@@ -292,7 +318,7 @@ function getCellText(cellXml, type, sharedStrings) {
 
   const value = decodeXml(valueMatch[1]);
   if (type === "s") return sharedStrings[Number(value)]?.text || "";
-  return value;
+  return formatPercentCellValue(value, style.numberFormat);
 }
 
 function getCellRichText(cellXml, type, sharedStrings) {
@@ -319,12 +345,14 @@ function parseSheetXml(xml, sharedStrings, styles) {
 
     rows[indexes.row] ||= [];
     formats[indexes.row] ||= [];
-    rows[indexes.row][indexes.column] = getCellText(cellMatch[0], attrs.t, sharedStrings);
-    formats[indexes.row][indexes.column] = styles[Number(attrs.s || 0)] || {
+    const style = styles[Number(attrs.s || 0)] || {
       background: "",
       foreground: "",
       bold: false,
+      numberFormat: "",
     };
+    rows[indexes.row][indexes.column] = getCellText(cellMatch[0], attrs.t, sharedStrings, style);
+    formats[indexes.row][indexes.column] = style;
 
     if (indexes.column === 18) {
       const runs = getCellRichText(cellMatch[0], attrs.t, sharedStrings);
@@ -349,10 +377,27 @@ function parseSheetXml(xml, sharedStrings, styles) {
 
 async function fetchXlsx(sheetConfig) {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx&id=${SHEET_ID}&gid=${sheetConfig.gid}`;
+  const startedAt = performance.now();
+  console.info("[jalkiwotda-genshin] sheet xlsx fetch start", {
+    version: sheetConfig.id,
+    gid: sheetConfig.gid,
+    url,
+  });
   const response = await fetch(url);
+  console.info("[jalkiwotda-genshin] sheet xlsx fetch response", {
+    version: sheetConfig.id,
+    status: response.status,
+    ok: response.ok,
+    elapsedMs: Math.round(performance.now() - startedAt),
+  });
   if (!response.ok) throw new Error(`Sheet XLSX fetch failed: HTTP ${response.status}`);
 
   const bytes = new Uint8Array(await response.clone().arrayBuffer());
+  console.info("[jalkiwotda-genshin] sheet xlsx fetch bytes", {
+    version: sheetConfig.id,
+    byteLength: bytes.byteLength,
+    elapsedMs: Math.round(performance.now() - startedAt),
+  });
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
     const text = new TextDecoder().decode(bytes.slice(0, 512));
     if (/accounts\.google\.com|ServiceLogin|InteractiveLogin/i.test(text)) {
@@ -365,7 +410,17 @@ async function fetchXlsx(sheetConfig) {
 }
 
 async function loadXlsxSheet(sheetConfig) {
+  const startedAt = performance.now();
+  console.info("[jalkiwotda-genshin] sheet parse start", {
+    version: sheetConfig.id,
+    gid: sheetConfig.gid,
+  });
   const entries = await unzipEntries(await fetchXlsx(sheetConfig));
+  console.info("[jalkiwotda-genshin] sheet unzip complete", {
+    version: sheetConfig.id,
+    entryCount: entries.size,
+    elapsedMs: Math.round(performance.now() - startedAt),
+  });
   const workbookXml = readZipText(entries, "xl/workbook.xml");
   const workbookRelsXml = readZipText(entries, "xl/_rels/workbook.xml.rels");
   const sharedStringsXml = entries.has("xl/sharedStrings.xml")
@@ -381,6 +436,14 @@ async function loadXlsxSheet(sheetConfig) {
 
   const sheetXml = readZipText(entries, workbookSheet.path);
   const parsedSheet = parseSheetXml(sheetXml, parseSharedStrings(sharedStringsXml), parseStyles(stylesXml));
+  console.info("[jalkiwotda-genshin] sheet parse complete", {
+    version: sheetConfig.id,
+    title: workbookSheet.name,
+    sheetId: workbookSheet.sheetId,
+    rowCount: parsedSheet.rows.length,
+    mergeCount: parsedSheet.merges.length,
+    elapsedMs: Math.round(performance.now() - startedAt),
+  });
 
   return {
     title: workbookSheet.name,
@@ -395,7 +458,13 @@ async function loadXlsxSheet(sheetConfig) {
 
 async function fetchSheet(version) {
   const sheetConfig = getSheetConfig(version);
-  if (!sheetCachePromises.has(sheetConfig.id)) {
+  const cacheHit = sheetCachePromises.has(sheetConfig.id);
+  console.info("[jalkiwotda-genshin] sheet request received", {
+    requestedVersion: version || "",
+    resolvedVersion: sheetConfig.id,
+    cacheHit,
+  });
+  if (!cacheHit) {
     sheetCachePromises.set(sheetConfig.id, loadXlsxSheet(sheetConfig));
   }
   return { sheet: await sheetCachePromises.get(sheetConfig.id), source: `xlsx-export:${sheetConfig.id}` };

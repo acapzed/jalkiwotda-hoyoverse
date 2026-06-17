@@ -14,12 +14,28 @@
     return sheetByNormalizedName.get(normalizeName(name)) || null;
   }
 
+  function getUniqueIncludedSheetCharacter(sheetByNormalizedName, normalized) {
+    const candidates = Array.from(sheetByNormalizedName.values())
+      .filter((character) => {
+        const sheetName = normalizeName(character.name);
+        return sheetName.length >= 2 && normalized.includes(sheetName);
+      });
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
   function resolveSheetName(character, sheetByNormalizedName) {
     const normalized = normalizeName(getCharacterName(character));
+    const exactCharacter = sheetByNormalizedName.get(normalized);
+    if (exactCharacter) return exactCharacter.name;
+
     const alias = app.constants.aliases.get(normalized);
     const aliasCharacter = getSheetCharacterByName(sheetByNormalizedName, alias);
     if (aliasCharacter) return aliasCharacter.name;
-    return sheetByNormalizedName.get(normalized)?.name || null;
+
+    const includedCharacter = getUniqueIncludedSheetCharacter(sheetByNormalizedName, normalized);
+    if (includedCharacter) return includedCharacter.name;
+
+    return null;
   }
 
   function splitExpectedOptions(values) {
@@ -120,15 +136,42 @@
     return Array.from(groups.values());
   }
 
+  function expandSetAliases(value) {
+    const normalized = normalizeCompareText(value);
+    const aliases = [normalized];
+    const aliasGroups = [
+      ["고요별", "고요속의별"],
+      ["카재", "카오스재즈"],
+      ["카메", "카오스메탈"],
+      ["쇼크스타디스크", "쇼크스타디스코"],
+      ["눈토끼", "이상한나라의눈토끼"],
+      ["아리아", "빛의아리아"],
+      ["달빛기사", "달빛기사의칭송"],
+      ["파에톤", "파에톤의노래"],
+      ["블루스", "자유의블루스"],
+      ["호르몬", "호르몬펑크"],
+    ];
+
+    for (const group of aliasGroups) {
+      if (group.some((alias) => normalized.includes(alias))) {
+        group.forEach((alias) => {
+          if (!aliases.includes(alias)) aliases.push(alias);
+        });
+      }
+    }
+
+    return aliases.filter(Boolean);
+  }
+
   function compareSetGroups(actualGroups, expectedValues) {
     const expected = splitExpectedOptions(expectedValues);
     if (expected.length === 0) return { status: "unknown", matched: null };
 
     const actualNames = actualGroups.flatMap((group) =>
-      (group.aliases.length ? group.aliases : [group.label]).map((name) => normalizeCompareText(name)),
+      (group.aliases.length ? group.aliases : [group.label]).flatMap((name) => expandSetAliases(name)),
     );
     const matched = expected.find((entry) => {
-      const requiredParts = entry.split(/\s*\+\s*|\/+/).map((part) => normalizeCompareText(part)).filter(Boolean);
+      const requiredParts = entry.split(/\s*\+\s*|\/+/).flatMap((part) => expandSetAliases(part));
       if (requiredParts.length === 0) return false;
       return requiredParts.some((part) => actualNames.some((actual) => actual.includes(part) || part.includes(actual)));
     });
